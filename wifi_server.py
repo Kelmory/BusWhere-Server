@@ -75,14 +75,17 @@ def get_bus_stop():
 
 
 # SQL injection
+# 'get_bus_at_stop_time'
 def inject_bus_at_stop_time(m_request):
     stop_id = m_request.args.get('stop_id')
     trip_id = m_request.args.get('trip_id')
-    sql = "SELECT arrival_time from stop_times " \
-          "WHERE stop_id = %s AND trip_id like '-%s-' " \
+    sql = "SELECT DISTINCT arrival_time from stop_times " \
+          "WHERE stop_id = %s AND trip_id like '%%-%s-%%' " \
           "ORDER BY arrival_time"
     sql = sql % (stop_id, trip_id)
+    return sql
 
+# 'get_stops'
 def inject_stops(m_request):
     lat1 = m_request.args.get('lat1')
     lat2 = m_request.args.get('lat2')
@@ -94,30 +97,30 @@ def inject_stops(m_request):
     sql = sql % (lat1, lat2, lng1, lng2)
     return sql
 
-
+# 'get_buses'
 def inject_buses(m_request):
     stop_id = m_request.args.get('stop_id')
-    sql = "select DISTINCT routes.route_id," \
-          "routes.route_short_name, routes.route_long_name\n " \
-          "from stop_times INDEXED by quick_stop_times\n " \
-          "left join stops On stop_times.stop_id = stops.stop_id\n " \
-          "left join trips on stop_times.trip_id = trips.trip_id\n " \
-          "LEFT join routes on trips.route_id = routes.route_id\n " \
-          "where stops.stop_id = %s\n" \
+    sql = "select DISTINCT routes.route_id, \n" \
+          "routes.route_short_name, routes.route_long_name \n " \
+          "from stop_times INDEXED by quick_stop_times \n " \
+          "left join stops On stop_times.stop_id = stops.stop_id \n " \
+          "left join trips on stop_times.trip_id = trips.trip_id \n " \
+          "LEFT join routes on trips.route_id = routes.route_id \n " \
+          "where stops.stop_id = %s \n" \
           "order by routes.route_short_name"
     sql = sql % (stop_id)
     return sql
 
-
+# 'get_stop_from_name'
 def inject_stop_from_name(m_request):
     name = m_request.args.get('name')
     sql = "SELECT stop_id, stop_name, stop_lat, stop_lon " \
           "FROM stops " \
-          "WHERE stop_name LIKE '%s'"
+          "WHERE stop_name LIKE '%%%s%%'"
     sql = sql % name
     return sql
 
-
+# 'get_buses_from_stop'
 def inject_bus_from_stop(m_request):
     name = m_request.args.get('name')
     sql = "select DISTINCT routes.route_id, routes.route_short_name, routes.route_long_name \n" \
@@ -125,24 +128,24 @@ def inject_bus_from_stop(m_request):
           "left join stops On stop_times.stop_id = stops.stop_id\n" \
           "left join trips on stop_times.trip_id = trips.trip_id\n" \
           "LEFT join routes on trips.route_id = routes.route_id\n" \
-          "where stops.stop_name is %s "
+          "where stops.stop_name like '%%%s%%' "
     sql = sql % name
     return sql
 
-
+# 'get_latlng_from_route'
 def inject_latlng_from_route(m_request):
     route_id = m_request.args.get('route_id')
     direction_id = m_request.args.get('direction_id')
-    sql = "select DISTINCT shape_pt_lat, shape_pt_lon, shape_pt_sequence\n" \
-          "from routes\n" \
-          "LEFT JOIN trips on routes.route_id = trips.route_id\n" \
-          "LEFT JOIN shapes on shapes.shape_id = trips.shape_id\n" \
-          "where routes.route_id = %s and trips.direction_id = %s\n" \
+    sql = "select DISTINCT shape_pt_lat, shape_pt_lon, shape_pt_sequence \n" \
+          "from routes \n" \
+          "LEFT JOIN trips on routes.route_id = trips.route_id \n" \
+          "LEFT JOIN shapes on shapes.shape_id = trips.shape_id \n" \
+          "where routes.route_id = '%s' and trips.direction_id = %s \n" \
           "ORDER by shapes.shape_id, shape_pt_sequence"
     sql = sql % (route_id, direction_id)
     return sql
 
-
+# 'get_stops_from_route'
 def inject_stops_from_route(m_request):
     route = m_request.args.get('route')
     sql = "select DISTINCT stop_id, stop_name, stop_lat, stop_lon\n" \
@@ -151,7 +154,7 @@ def inject_stops_from_route(m_request):
           "(SELECT stop_id from stop_times\n" \
           "where trip_id =(\n" \
           "select trip_id from trips\n" \
-          "where trip_id like '-%s-'\n" \
+          "where trip_id like '%%-%s-%%'\n" \
           "limit 1) \n" \
           "ORDER by stop_sequence)\n"
     sql = sql % route
