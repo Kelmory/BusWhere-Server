@@ -75,6 +75,14 @@ def get_bus_stop():
 
 
 # SQL injection
+def inject_bus_at_stop_time(m_request):
+    stop_id = m_request.args.get('stop_id')
+    trip_id = m_request.args.get('trip_id')
+    sql = "SELECT arrival_time from stop_times " \
+          "WHERE stop_id = %s AND trip_id like '-%s-' " \
+          "ORDER BY arrival_time"
+    sql = sql % (stop_id, trip_id)
+
 def inject_stops(m_request):
     lat1 = m_request.args.get('lat1')
     lat2 = m_request.args.get('lat2')
@@ -163,6 +171,8 @@ def parse_request(m_request: request, request_type: str) -> str:
         return inject_latlng_from_route(m_request)
     elif request_type == 'get_stops_from_route':
         return inject_stops_from_route(m_request)
+    elif request_type == 'get_bus_at_stop_time':
+        return inject_bus_at_stop_time(m_request)
     return None
 
 
