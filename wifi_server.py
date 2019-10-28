@@ -85,6 +85,7 @@ def inject_bus_at_stop_time(m_request):
     sql = sql % (stop_id, trip_id)
     return sql
 
+
 # 'get_stops'
 def inject_stops(m_request):
     lat1 = m_request.args.get('lat1')
@@ -96,6 +97,7 @@ def inject_stops(m_request):
           "WHERE stop_lat > %s AND stop_lat < %s AND stop_lon > %s AND stop_lon < %s"
     sql = sql % (lat1, lat2, lng1, lng2)
     return sql
+
 
 # 'get_buses'
 def inject_buses(m_request):
@@ -111,26 +113,29 @@ def inject_buses(m_request):
     sql = sql % (stop_id)
     return sql
 
+
 # 'get_stop_from_name'
 def inject_stop_from_name(m_request):
     name = m_request.args.get('name')
     sql = "SELECT stop_id, stop_name, stop_lat, stop_lon " \
           "FROM stops " \
-          "WHERE stop_name LIKE '%%%s%%'"
+          "WHERE stop_name LIKE '%%%s%%' LIMIT 10"
     sql = sql % name
     return sql
+
 
 # 'get_buses_from_stop'
 def inject_bus_from_stop(m_request):
     name = m_request.args.get('name')
     sql = "select DISTINCT routes.route_id, routes.route_short_name, routes.route_long_name \n" \
           "from stop_times INDEXED by quick_stop_times \n" \
-          "left join stops On stop_times.stop_id = stops.stop_id\n" \
-          "left join trips on stop_times.trip_id = trips.trip_id\n" \
-          "LEFT join routes on trips.route_id = routes.route_id\n" \
+          "left join stops On stop_times.stop_id = stops.stop_id \n" \
+          "left join trips on stop_times.trip_id = trips.trip_id \n" \
+          "LEFT join routes on trips.route_id = routes.route_id \n" \
           "where stops.stop_name like '%%%s%%' "
     sql = sql % name
     return sql
+
 
 # 'get_latlng_from_route'
 def inject_latlng_from_route(m_request):
@@ -148,16 +153,30 @@ def inject_latlng_from_route(m_request):
 # 'get_stops_from_route'
 def inject_stops_from_route(m_request):
     route = m_request.args.get('route')
-    sql = "select DISTINCT stop_id, stop_name, stop_lat, stop_lon\n" \
-          "FROM stops\n" \
-          "where stop_id in\n" \
-          "(SELECT stop_id from stop_times\n" \
-          "where trip_id =(\n" \
-          "select trip_id from trips\n" \
-          "where trip_id like '%%-%s-%%'\n" \
+    sql = "select DISTINCT stop_id, stop_name, stop_lat, stop_lon \n" \
+          "FROM stops \n" \
+          "where stop_id in \n" \
+          "(SELECT stop_id from stop_times \n" \
+          "where trip_id =( \n" \
+          "select trip_id from trips \n" \
+          "where trip_id like '%%-%s-%%' \n" \
           "limit 1) \n" \
           "ORDER by stop_sequence)\n"
     sql = sql % route
+    return sql
+
+
+# 'get_route_between_stops'
+def inject_route_between_stops(m_request):
+    start = m_request.args.get('start')
+    stop = m_request.args.get('stop')
+    sql = "SELECT DISTINCT routes.route_id, routes.route_short_name, routes.route_long_name " \
+          "FROM stop_times " \
+          "LEFT JOIN trips on trips.trip_id = stop_times.trip_id " \
+          "LEFT JOIN routes on routes.route_id = trips.route_id " \
+          "WHERE " \
+          "stop_times.stop_id in (%s, %s)"
+    sql = sql % (start, stop)
     return sql
 
 
@@ -176,6 +195,8 @@ def parse_request(m_request: request, request_type: str) -> str:
         return inject_stops_from_route(m_request)
     elif request_type == 'get_bus_at_stop_time':
         return inject_bus_at_stop_time(m_request)
+    elif request_type == 'get_route_between_stops':
+        return inject_route_between_stops(m_request)
     return None
 
 
